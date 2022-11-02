@@ -29,7 +29,6 @@ device = 'cuda' if torch.cuda.is_available() and args.cuda else 'cpu'
 # model
 G = init_net(generator.Generator(args.noise_features), args.init_type, args.init_gain).to(device)
 D = init_net(discriminator.Discriminator(args.channel), args.init_type, args.init_gain).to(device)
-print(G.eval())
 
 # retrained / continuous training
 try:
@@ -49,8 +48,18 @@ except:
 optimizer_G = torch.optim.Adam(G.parameters(), lr=args.lr_g, betas=(0.5, 0.999))
 optimizer_D = torch.optim.Adam(D.parameters(), lr=args.lr_d, betas=(0.5, 0.999))
 
-lr_scheduler_G = lr_scheduler.CosineAnnealingWarmRestarts(optimizer_G, T_0=10, T_mult=2, eta_min=1e-5)
-lr_scheduler_D = lr_scheduler.ExponentialLR(optimizer_D, gamma=0.9)
+lr_scheduler_G = lr_scheduler.SequentialLR(
+    optimizer_G, schedulers=[lr_scheduler.ExponentialLR(optimizer_G, gamma=0.9),  # warm up
+                             lr_scheduler.CosineAnnealingWarmRestarts(
+                                 optimizer_G,
+                                 T_0=10, T_mult=2, eta_min=1e-5
+                             )], milestones=[5])
+
+lr_scheduler_D = lr_scheduler.ExponentialLR(optimizer_D, gamma=0.75)
+
+for _ in range(resume_epoch):
+    lr_scheduler_G.step()
+    lr_scheduler_D.step()
 
 # criterion
 criterion_GAN = torch.nn.MSELoss()
@@ -95,9 +104,11 @@ for epoch in range(resume_epoch + 1, args.epochs):
         if i % args.print_interval == 0:
             print(f'epoch: {epoch}/{args.epochs}\tbatch: {i}/{len(data_loader)}\t'
                   f'loss_G: {loss_G:0.6f}\tloss_D: {loss_D:0.6f}\t'
-                  f'|| learning rate_G: {optimizer_G.state_dict()["param_groups"][0]["lr"]:0.6f}\t'
+                  f'|| learning rate_G: {optimizer_G.state_dict()["param_groups"][0]["lr"]:0.8f}\t'
                   f'learning rate_D: {optimizer_D.state_dict()["param_groups"][0]["lr"]:0.8f}\t')
 
+            # ic(pred_fake, pred_real, target_real, target_fake)
+            # ic(pred_fake.shape)
             os.makedirs('output', exist_ok=True)
             trans = transforms.ToPILImage()
             trans(fake_img[0]).save(f'output/{train_id}_{epoch}_{i}_fake.jpg')
