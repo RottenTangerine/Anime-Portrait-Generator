@@ -5,14 +5,15 @@ import os
 
 
 class ImageData(Dataset):
-    def __init__(self, dataset_name):
-        self.path = os.path.join('./data', dataset_name)
+    def __init__(self, path):
+        self.path = path
         self.image_list = os.listdir(self.path)
 
     def read_data(self, index):
         img_a = Image.open(os.path.join(self.path, self.image_list[index]))
         img_a = img_a.convert('RGB')
         img_a = T.Compose([
+            T.RandomHorizontalFlip(),
             T.ToTensor(),
             T.Resize((160, 160)),
             T.CenterCrop(128),
@@ -36,7 +37,7 @@ class ImageData(Dataset):
 
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
-    dataset = ImageData('anime')
+    dataset = ImageData('../data/anime')
     DataLoader = DataLoader(dataset, batch_size=6, shuffle=True)
 
     img = next(iter(DataLoader))[0]

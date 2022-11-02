@@ -4,7 +4,7 @@ from argparse import ArgumentParser
 def get_parser():
     args = ArgumentParser()
 
-    args.add_argument('--dataset', type=str, default='anime', help='name of the dataset')
+    args.add_argument('--dataset', type=str, default='./data/anime', help='name of the dataset')
     args.add_argument('--channel', type=int, default=3, help='number of the channel')
     args.add_argument('--init_type', type=str, default='normal', help='init function')
     args.add_argument('--init_gain', type=float, default=0.02, help='init gain')

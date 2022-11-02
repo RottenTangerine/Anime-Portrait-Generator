@@ -1,6 +1,8 @@
 import time
 import os
 
+import matplotlib.pyplot as plt
+import numpy as np
 import torch
 from config import get_parser
 from torch.utils.data import DataLoader
@@ -11,8 +13,10 @@ from dataset.dataset import ImageData
 from model import discriminator, generator
 from model.utils import init_net
 
-from torchvision import transforms
+import torchvision
+torch.set_printoptions(profile="full", linewidth=100)
 from icecream import ic
+
 
 args = get_parser()
 train_id = int(time.time())
@@ -49,14 +53,20 @@ optimizer_G = torch.optim.Adam(G.parameters(), lr=args.lr_g, betas=(0.5, 0.999))
 optimizer_D = torch.optim.Adam(D.parameters(), lr=args.lr_d, betas=(0.5, 0.999))
 
 lr_scheduler_G = lr_scheduler.SequentialLR(
-    optimizer_G, schedulers=[lr_scheduler.ExponentialLR(optimizer_G, gamma=0.9),  # warm up
+    optimizer_G, schedulers=[lr_scheduler.ExponentialLR(optimizer_G, gamma=1),
                              lr_scheduler.CosineAnnealingWarmRestarts(
                                  optimizer_G,
                                  T_0=10, T_mult=2, eta_min=1e-5
-                             )], milestones=[5])
+                             )], milestones=[5]
+)
 
-lr_scheduler_D = lr_scheduler.ExponentialLR(optimizer_D, gamma=0.75)
-
+lr_scheduler_D = lr_scheduler.SequentialLR(
+    optimizer_D, schedulers=[lr_scheduler.ExponentialLR(optimizer_D, gamma=1),
+                             lr_scheduler.CosineAnnealingWarmRestarts(
+                                 optimizer_D,
+                                 T_0=10, T_mult=2, eta_min=1e-5
+                             )], milestones=[5]
+)
 for _ in range(resume_epoch):
     lr_scheduler_G.step()
     lr_scheduler_D.step()
@@ -84,9 +94,6 @@ for epoch in range(resume_epoch + 1, args.epochs):
         target_fake = (torch.ones(pred_fake.shape) * 0.05).to(device)
         loss_G = criterion_GAN(pred_fake, target_real)
 
-        loss_G.backward()
-        optimizer_G.step()
-
         # Discriminator
         optimizer_D.zero_grad()
 
@@ -98,20 +105,25 @@ for epoch in range(resume_epoch + 1, args.epochs):
         # ic(pred_fake, loss_pred_fake)
         loss_D = (loss_pred_real + loss_pred_fake) * 0.5
 
-        loss_D.backward()
-        optimizer_D.step()
+        if loss_G - loss_D > -0.15:
+            loss_G.backward()
+            optimizer_G.step()
+
+        if loss_D - loss_G > -0.15:
+            loss_D.backward()
+            optimizer_D.step()
 
         if i % args.print_interval == 0:
+            print(loss_G - loss_D > -0.2)
             print(f'epoch: {epoch}/{args.epochs}\tbatch: {i}/{len(data_loader)}\t'
                   f'loss_G: {loss_G:0.6f}\tloss_D: {loss_D:0.6f}\t'
                   f'|| learning rate_G: {optimizer_G.state_dict()["param_groups"][0]["lr"]:0.8f}\t'
                   f'learning rate_D: {optimizer_D.state_dict()["param_groups"][0]["lr"]:0.8f}\t')
 
-            # ic(pred_fake, pred_real, target_real, target_fake)
+            ic(pred_fake, pred_real)
             # ic(pred_fake.shape)
             os.makedirs('output', exist_ok=True)
-            trans = transforms.ToPILImage()
-            trans(fake_img[0]).save(f'output/{train_id}_{epoch}_{i}_fake.jpg')
+            torchvision.utils.save_image(fake_img[0], f'output/{train_id}_{epoch}_{i}.jpg')
 
     # scheduler
     lr_scheduler_G.step()
@@ -128,4 +140,8 @@ for epoch in range(resume_epoch + 1, args.epochs):
 
 # save model
 os.makedirs('trained_model', exist_ok=True)
-torch.save(G.state_dict(), f'./trained_model/G_B2A_{train_id}.pth')
+try:
+    torch.save(G.state_dict(), f'./trained_model/G_{train_id}.pth')
+    print(f'Successfully saves the model ./trained_model/G_{train_id}.pth')
+except:
+    print('Fail to save the model, this project will automatically use the latest checkpoint to recover the model')
