@@ -24,4 +24,8 @@ def get_parser():
     # print option
     args.add_argument('--print_interval', type=int, default=100, help='print intervel')
 
+    # generation option
+    args.add_argument('--model', type=str, default='G_1667406442.pth', help='name of the model you want to use')
+    args.add_argument('--gen_number', type=int, default=10, help='number of image you want to generate')
+
     return args.parse_args()
