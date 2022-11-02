@@ -14,7 +14,7 @@ class ImageData(Dataset):
         img_a = img_a.convert('RGB')
         img_a = T.Compose([
             T.ToTensor(),
-            T.Resize((150, 150)),
+            T.Resize((160, 160)),
             T.CenterCrop(128),
             T.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])
         ])(img_a)
@@ -28,7 +28,8 @@ class ImageData(Dataset):
             img = self.read_data(index)
         except Exception as e:
             # open random image
-            print('Cannot open the image, use the first image as the default image')
+            print('Cannot open the image, use the'
+                  ' first image as the default image')
             img = self.read_data(0)
         return img
 
@@ -36,7 +37,7 @@ class ImageData(Dataset):
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
     dataset = ImageData('anime')
-    DataLoader = DataLoader(dataset, batch_size=6)
+    DataLoader = DataLoader(dataset, batch_size=6, shuffle=True)
 
     img = next(iter(DataLoader))[0]
     img = img.permute(1, 2, 0)

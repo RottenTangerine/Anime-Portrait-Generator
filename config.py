@@ -15,9 +15,9 @@ def get_parser():
     args.add_argument('--cuda', type=bool, default=True, help='use cuda training')
 
     # training
-    args.add_argument('--batch_size', type=int, default='8', help='batch size number')
+    args.add_argument('--batch_size', type=int, default=18, help='batch size number')
     args.add_argument('--lr_g', type=float, default=2e-4, help='learning rate of generator')
-    args.add_argument('--lr_d', type=float, default=5e-5, help='learning rate of discriminator')
+    args.add_argument('--lr_d', type=float, default=1e-4, help='learning rate of discriminator')
     args.add_argument('--epochs', type=int, default=30, help='number of epochs')
     args.add_argument('--output_channel', type=int, default=3, help='size of the output image channel')
 
