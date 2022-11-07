@@ -61,10 +61,10 @@ lr_scheduler_G = lr_scheduler.SequentialLR(
 )
 
 lr_scheduler_D = lr_scheduler.SequentialLR(
-    optimizer_D, schedulers=[lr_scheduler.ExponentialLR(optimizer_D, gamma=1),
+    optimizer_D, schedulers=[lr_scheduler.ExponentialLR(optimizer_D, gamma=0.9),
                              lr_scheduler.CosineAnnealingWarmRestarts(
                                  optimizer_D,
-                                 T_0=10, T_mult=2, eta_min=1e-5
+                                 T_0=10, T_mult=2, eta_min=5e-6
                              )], milestones=[5]
 )
 for _ in range(resume_epoch):
@@ -94,6 +94,9 @@ for epoch in range(resume_epoch + 1, args.epochs):
         target_fake = (torch.ones(pred_fake.shape) * 0.05).to(device)
         loss_G = criterion_GAN(pred_fake, target_real)
 
+        loss_G.backward()
+        optimizer_G.step()
+
         # Discriminator
         optimizer_D.zero_grad()
 
@@ -105,22 +108,16 @@ for epoch in range(resume_epoch + 1, args.epochs):
         # ic(pred_fake, loss_pred_fake)
         loss_D = (loss_pred_real + loss_pred_fake) * 0.5
 
-        if loss_G - loss_D > -0.15:
-            loss_G.backward()
-            optimizer_G.step()
-
-        if loss_D - loss_G > -0.15:
-            loss_D.backward()
-            optimizer_D.step()
+        loss_D.backward()
+        optimizer_D.step()
 
         if i % args.print_interval == 0:
-            print(loss_G - loss_D > -0.2)
             print(f'epoch: {epoch}/{args.epochs}\tbatch: {i}/{len(data_loader)}\t'
                   f'loss_G: {loss_G:0.6f}\tloss_D: {loss_D:0.6f}\t'
                   f'|| learning rate_G: {optimizer_G.state_dict()["param_groups"][0]["lr"]:0.8f}\t'
                   f'learning rate_D: {optimizer_D.state_dict()["param_groups"][0]["lr"]:0.8f}\t')
 
-            ic(pred_fake, pred_real)
+            # ic(pred_fake, pred_real)
             # ic(pred_fake.shape)
             os.makedirs('output', exist_ok=True)
             torchvision.utils.save_image(fake_img[0], f'output/{train_id}_{epoch}_{i}.jpg')

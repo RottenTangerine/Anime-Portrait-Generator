@@ -8,14 +8,14 @@ class Discriminator(nn.Module):
 
         layers = []
         # init conv
-        layers.append(BasicConv(input_channel, 64, 3, 1, 1, bn=False))
+        layers.append(BasicConv(input_channel, 64, 3, 2, 1, bn=False))
         input_channel = 64
         cfd = [128, 256, 512]
         for out_channel in cfd:
             layers.append(BasicConv(input_channel, out_channel, 4, 2, 1))
             input_channel = out_channel
         layers.append(BasicConv(input_channel, input_channel, kernel_size=4, stride=1, padding=1))
-        layers.append(nn.Conv2d(input_channel, 1, kernel_size=1, stride=1, padding=1))
+        layers.append(nn.Conv2d(input_channel, 1, kernel_size=4, stride=1, padding=1))
 
         self.conv = nn.Sequential(*layers)
 
