@@ -1,17 +1,17 @@
 import time
 import os
 
-import matplotlib.pyplot as plt
-import numpy as np
 import torch
+
+import generate
 from config import get_parser
 from torch.utils.data import DataLoader
 from torch.optim import lr_scheduler
-from torch.autograd import Variable
 from dataset.dataset import ImageData
 
 from model import discriminator, generator
 from model.utils import init_net
+from generate import gen_img
 
 import torchvision
 torch.set_printoptions(profile="full", linewidth=100)
@@ -40,6 +40,7 @@ try:
     ckpt_path = os.path.join('checkpoint', most_recent_check_point)
     check_point = torch.load(ckpt_path)
     # load model
+    1/0
     G.load_state_dict(check_point['G_state_dict'])
     D.load_state_dict(check_point['D_state_dict'])
     resume_epoch = check_point['epoch']
@@ -72,7 +73,7 @@ for _ in range(resume_epoch):
     lr_scheduler_D.step()
 
 # criterion
-criterion_GAN = torch.nn.MSELoss()
+criterion_GAN = torch.nn.functional.binary_cross_entropy
 
 print('***start training***')
 # training
@@ -120,7 +121,9 @@ for epoch in range(resume_epoch + 1, args.epochs):
             # ic(pred_fake, pred_real)
             # ic(pred_fake.shape)
             os.makedirs('output', exist_ok=True)
-            torchvision.utils.save_image(fake_img[0], f'output/{train_id}_{epoch}_{i}.jpg')
+            fake_img = G(z)
+            img = torch.cat([torch.cat([gen_img(args, G, device) for _ in range(4)], dim=-1) for _ in range(4)], dim=-2)
+            torchvision.utils.save_image(img, f'output/{train_id}_{epoch}_{i}.jpg')
 
     # scheduler
     lr_scheduler_G.step()

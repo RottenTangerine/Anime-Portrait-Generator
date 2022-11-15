@@ -6,7 +6,7 @@ class BasicConv(nn.Module):
         super(BasicConv, self).__init__()
         layers = [
             nn.ReflectionPad2d(padding),
-            nn.Conv2d(input_channel, output_channel, kernel_size, stride)
+            nn.Conv2d(input_channel, output_channel, kernel_size, stride, bias=False)
         ]
         if bn:
             layers.append(nn.InstanceNorm2d(output_channel))

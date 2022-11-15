@@ -11,11 +11,14 @@ import torch.nn as nn
 
 
 class BasicUpsampleBlock(nn.Module):
-    def __init__(self, in_channel, out_channel, kernel_size=4, stride=2, padding=1, activation=True):
+    def __init__(self, in_channel, out_channel, kernel_size=4, stride=2, padding=1, bn=True, activation=True):
         super(BasicUpsampleBlock, self).__init__()
 
-        layers = [nn.ConvTranspose2d(in_channel, out_channel, kernel_size=kernel_size, stride=stride, padding=padding),
-                  nn.BatchNorm2d(out_channel)]
+        layers = [nn.ConvTranspose2d(in_channel, out_channel, kernel_size=kernel_size, stride=stride, padding=padding,
+                                     bias=False)]
+
+        if bn:
+            layers.append(nn.BatchNorm2d(out_channel))
 
         if activation:
             layers.append(nn.LeakyReLU(0.2, True))
@@ -23,7 +26,6 @@ class BasicUpsampleBlock(nn.Module):
         self.upsample = nn.Sequential(*layers)
 
     def forward(self, x):
-        # print(x.shape)
         x = self.upsample(x)
         return x
 
@@ -32,25 +34,57 @@ class Generator(nn.Module):
     def __init__(self, in_channel, out_channel=3):
         super(Generator, self).__init__()
 
-        _in_channel = 512
-        layers = [BasicUpsampleBlock(in_channel, _in_channel, kernel_size=4, stride=1, padding=0)]
+        # _in_channel = 512
+        # layers = [BasicUpsampleBlock(in_channel, _in_channel, kernel_size=4, stride=1, padding=0)]
+        #
+        # # upsampling
+        # cfg = [512, 256, 128, 64]
+        # for _out_channel in cfg:
+        #     layers.append(BasicUpsampleBlock(_in_channel, _out_channel))
+        #     _in_channel = _out_channel
+        #
+        # # last conv
+        # layers += [
+        #     BasicUpsampleBlock(64, out_channel, bn=False, activation=False),
+        #     nn.Tanh()
+        # ]
+        #
+        # self.conv = nn.Sequential(*layers)
+        self.conv = nn.Sequential(
+            # in: latent_size x 1 x 1
+            nn.ConvTranspose2d(in_channel, 512, kernel_size=4, stride=1, padding=0, bias=False),
+            nn.BatchNorm2d(512),
+            nn.ReLU(True),
+            # out: 512 x 4 x 4
+            nn.ConvTranspose2d(512, 512, kernel_size=4, stride=2, padding=1, bias=False),
+            nn.BatchNorm2d(512),
+            nn.ReLU(True),
+            # out: 512 x 4 x 4
 
-        # upsampling
-        cfg = [512, 256, 128, 64]
-        for _out_channel in cfg:
-            layers.append(BasicUpsampleBlock(_in_channel, _out_channel))
-            _in_channel = _out_channel
+            nn.ConvTranspose2d(512, 256, kernel_size=4, stride=2, padding=1, bias=False),
+            nn.BatchNorm2d(256),
+            nn.ReLU(True),
+            # out: 256 x 8 x 8
 
-        # last conv
-        layers += [
-            BasicUpsampleBlock(64, out_channel, activation=False),
+            nn.ConvTranspose2d(256, 128, kernel_size=4, stride=2, padding=1, bias=False),
+            nn.BatchNorm2d(128),
+            nn.ReLU(True),
+            # out: 128 x 16 x 16
+
+            nn.ConvTranspose2d(128, 64, kernel_size=4, stride=2, padding=1, bias=False),
+            nn.BatchNorm2d(64),
+            nn.ReLU(True),
+            # out: 64 x 32 x 32
+
+            nn.ConvTranspose2d(64, 3, kernel_size=4, stride=2, padding=1, bias=False),
             nn.Tanh()
-        ]
-
-        self.conv = nn.Sequential(*layers)
+            # out: 3 x 64 x 64
+        )
 
     def forward(self, x):
         return self.conv(x)
+
+
 
 
 if __name__ == '__main__':
